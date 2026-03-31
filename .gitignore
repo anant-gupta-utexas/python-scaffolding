@@ -81,5 +81,8 @@ logs/
 .DS_Store
 Thumbs.db
 
+# Claude related
+.claude
+
 # Project specific
 # Add any project-specific ignores here
