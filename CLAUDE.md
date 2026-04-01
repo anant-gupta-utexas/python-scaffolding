@@ -60,3 +60,36 @@ src/
 * Dependency Inversion: Inner layers define interfaces, outer layers implement
 * Single Responsibility: Each component has one reason to change
 * Testability: Pure business logic independent of frameworks
+* Immutability: Use frozen dataclasses for domain entities, never mutate existing objects
+* Security-First: Validate all inputs, no hardcoded secrets, parameterized queries only
+
+## Coding Style
+
+- Frozen `dataclass(frozen=True)` for domain entities; `pydantic.BaseModel` for API schemas
+- Functions < 50 lines, files < 400 lines (800 max)
+- No deep nesting (> 4 levels) — use early returns and extract helpers
+- Use `pydantic_settings.BaseSettings` for configuration, never `os.environ` directly
+
+## Error Handling
+
+- Custom exception hierarchy per domain (`DomainError` → `NotFoundError`, `ValidationError`, etc.)
+- Never silently swallow errors
+- Log detailed context server-side, return user-friendly messages in API responses
+- Use FastAPI exception handlers for consistent error response format
+
+## Security Checklist
+
+Before every commit, verify:
+- No hardcoded secrets (API keys, passwords, tokens)
+- All user inputs validated (Pydantic schemas at API boundary)
+- SQL injection prevention (SQLAlchemy parameterized queries)
+- Authentication/authorization verified on all protected routes
+- Rate limiting on public endpoints
+- Error messages don't leak internal details (stack traces, DB errors)
+
+## Anti-Patterns (Avoid)
+
+- Never use Pydantic V1 APIs (`class Config:`, `.dict()`, `.json()`) — use V2 equivalents
+- Never put business logic in API routers — use application layer use cases
+- Never import domain from infrastructure (dependency rule violation)
+- Never commit `.env` files or hardcoded credentials
