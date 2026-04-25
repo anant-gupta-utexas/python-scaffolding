@@ -19,6 +19,18 @@ pytest
 
 ## Directory Structure & Walkthrough
 
+### Status File (`STATUS.md`)
+**CURRENT STATE**: Machine-readable project status for cross-repo coordination.
+```
+STATUS.md   # Root-level. Frontmatter: project, status, phase, last_updated,
+            # next_gate, blocked_on. Sections: Current, Recent, Next, Blocked,
+            # Pointers. Updated whenever phase or gate changes.
+```
+
+Keep `STATUS.md` current — it is the file second-brain's `cos weekly` reads
+to build the dashboard project-status table. The frontmatter `status` field
+drives the rollup: `design | building | shipped | maintenance | paused`.
+
 ### Core Documentation (`docs/`)
 **EVERGREEN DOCS**: The single source of truth for the project.
 ```
