@@ -1,0 +1,35 @@
+---
+project: "{{ project_name }}"
+status: design             # design | building | shipped | maintenance | paused
+phase: "Scaffolded"
+last_updated: YYYY-MM-DD   # update whenever phase or gate changes
+next_gate: "[Next decision or milestone]"
+blocked_on: null           # short string, or null
+---
+
+# {{ project_name }}: status
+
+## Current
+
+One paragraph on where the project is right now: what just shipped, what is being built, and the
+next milestone.
+
+## Recent (last 7 days)
+
+- Meaningful changes (commits, decisions, gates passed). Keep to 5 items or fewer; older history
+  lives in `git log`.
+
+## Next
+
+- 1 to 3 concrete next actions. Reference files, issues or PRs.
+
+## Blocked / waiting
+
+- Anything stalled and what it is waiting on. Leave an empty bullet if nothing is blocked.
+
+## Pointers
+
+- PRD: `docs/01_product/PRD.md`
+- TRD: `docs/02_architecture/TRD.md`
+- System design: `docs/02_architecture/SYSTEM_DESIGN.md`
+- Active work: `dev/active/`

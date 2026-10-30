@@ -1,0 +1,52 @@
+# dev/: work in progress
+
+Plans, task lists and session notes for features being built. Evergreen documentation lives in
+[`docs/`](../docs/README.md); this folder is the working memory.
+
+```
+dev/
+├── README.md        # this file: workflow + handoff for a new session
+├── session-log.md   # per-session notes, newest first
+├── _templates/      # plan / context / tasks templates (used by scripts/new_feature.sh)
+├── active/          # features currently being built
+└── archive/         # finished features, kept as a record of why decisions were made
+```
+
+## Workflow
+
+1. **Start planning.** `scripts/new_feature.sh <feature-name>` creates `dev/active/<feature-name>/`
+   with the three docs below.
+2. **Define the spec.** Fill in:
+   - `<feature-name>-plan.md`: the technical design (TDS): approach, contracts, decisions.
+   - `<feature-name>-context.md`: why, dependencies, files to touch, integration points,
+     blockers, evidence, and a "current state" section for the next session.
+   - `<feature-name>-tasks.md`: the checklist (`[ ]` todo, `[~]` in progress, `[x]` done,
+     `[!]` blocked), including tests and doc updates.
+3. **Build.** Get the plan reviewed, then implement on a `feature/<name>` branch. Write tests
+   alongside the code and run `scripts/check.sh` before every commit. Commit often.
+4. **Update core docs.** Definition of Done includes updating `docs/` (architecture, guides,
+   testing) and the `docs/README.md` index.
+5. **Archive.** After merge, move the folder from `dev/active/` to `dev/archive/`.
+
+Keep each file under 800 lines. If a plan outgrows that, split it by topic (for example a
+`-plan-impl.md` for per-task specs), not by arbitrary length.
+
+## Active features
+
+| Feature | Branch | Start here |
+|---|---|---|
+| _none yet_ | | |
+
+## Handoff for a new session
+
+Give the new session this file, then paste something like:
+
+```text
+Continue the {{ project_name }} workstream. Start with dev/README.md, then the context file of the
+active feature (its "current state" section) and the latest entries in dev/session-log.md.
+Inspect git status and the current branch first and preserve unrelated changes.
+Do not push commits, publish data or apply infrastructure without explicit authorization.
+```
+
+Fill in a **Gotchas** list here as you hit them (environment quirks, ordering constraints,
+things that look wrong but are intentional).

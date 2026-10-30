@@ -1,0 +1,27 @@
+from pathlib import Path
+
+import pytest
+
+from {{ package_name }} import paths
+
+
+def test_data_path_builds_stage_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
+
+    assert paths.data_path("raw", "a.csv") == tmp_path / "raw" / "a.csv"
+    assert not (tmp_path / "raw").exists()
+
+
+def test_data_path_creates_the_stage_directory_on_request(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(paths, "DATA_DIR", tmp_path)
+
+    paths.data_path("interim", create=True)
+
+    assert (tmp_path / "interim").is_dir()
+
+
+def test_data_path_rejects_unknown_stage() -> None:
+    with pytest.raises(ValueError, match="unknown data stage"):
+        paths.data_path("bogus")

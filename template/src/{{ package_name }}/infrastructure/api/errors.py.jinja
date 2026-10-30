@@ -1,0 +1,24 @@
+"""Map domain errors to HTTP responses in one place, so routers never build error payloads."""
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+from {{ package_name }}.domain.errors import DomainError, DomainValidationError, NotFoundError
+
+# Most specific first: DomainError is the catch-all, so the lookup below always matches.
+_STATUS_BY_ERROR: tuple[tuple[type[DomainError], int], ...] = (
+    (NotFoundError, 404),
+    (DomainValidationError, 422),
+    (DomainError, 400),
+)
+
+
+def status_for(error: DomainError) -> int:
+    return next(status for kind, status in _STATUS_BY_ERROR if isinstance(error, kind))
+
+
+def register_error_handlers(app: FastAPI) -> None:
+    @app.exception_handler(DomainError)
+    async def handle_domain_error(_: Request, exc: DomainError) -> JSONResponse:
+        body = {"error": {"code": type(exc).__name__, "message": str(exc)}}
+        return JSONResponse(status_code=status_for(exc), content=body)

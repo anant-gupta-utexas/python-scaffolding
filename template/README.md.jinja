@@ -1,0 +1,28 @@
+# {{ project_name }}
+
+{{ description }}
+
+## Quick start
+
+```bash
+uv sync
+scripts/check.sh        # ruff, mypy --strict, size limits, secret scan, pytest + coverage
+{% if is_cli %}
+uv run {{ project_slug }} --help
+{% endif %}
+{% if is_service %}
+cp .env.example .env
+uv run uvicorn {{ package_name }}.infrastructure.api.app:create_app --factory --reload
+{% endif %}
+```
+
+## Documentation
+
+- [`AGENTS.md`](AGENTS.md): project signpost, structure, coding rules and workflow
+- [`docs/README.md`](docs/README.md): index of the evergreen docs
+- [`docs/03_guides/getting_started.md`](docs/03_guides/getting_started.md): setup and workflow
+- [`dev/README.md`](dev/README.md): plans and work in progress
+- [`STATUS.md`](STATUS.md): current project status
+
+Generated with [python-scaffolding](https://github.com/anant-gupta-utexas/python-scaffolding);
+run `uvx copier update` to pull in template improvements.

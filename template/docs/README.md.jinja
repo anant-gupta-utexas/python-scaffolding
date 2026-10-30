@@ -1,0 +1,46 @@
+# Documentation index
+
+The single index for the evergreen docs: every file is listed here with when to read it. Add a
+row here whenever you add a doc, and do not add a README per directory unless that directory
+holds more than five files. Doc changes are part of the Definition of Done for any feature.
+
+## Research (`00_research/`)
+
+Findings, spikes and evidence that informed decisions. Add one file per topic and index it below.
+
+| Doc | When to read |
+|---|---|
+| _none yet_ | |
+
+## Product (`01_product/`)
+
+| Doc | When to read |
+|---|---|
+| [`PRD.md`](01_product/PRD.md) | You need the problem, objectives, users, release plan and scope boundaries. |
+
+## Architecture (`02_architecture/`)
+
+| Doc | When to read |
+|---|---|
+| [`SYSTEM_DESIGN.md`](02_architecture/SYSTEM_DESIGN.md) | You need the target architecture: components, data model, storage, security, deployment. |
+| [`TRD.md`](02_architecture/TRD.md) | You need a requirement ID, a development phase definition or the open dependencies. |
+
+## Guides (`03_guides/`)
+
+| Doc | When to read |
+|---|---|
+| [`getting_started.md`](03_guides/getting_started.md) | First day on the repo: setup, run, test, the dev workflow. |
+{% if is_service %}
+| [`core_concepts.md`](03_guides/core_concepts.md) | You are adding a feature and need the Clean Architecture layers, dependency rule and patterns. |
+{% endif %}
+
+## Testing (`04_testing/`)
+
+| Doc | When to read |
+|---|---|
+| [`index.md`](04_testing/index.md) | You are about to commit (the `scripts/check.sh` gate) or adding tests. |
+
+## Where the work-in-progress lives
+
+Plans and task lists are not evergreen docs: [`dev/README.md`](../dev/README.md) is the session
+entry point, `dev/active/` holds features being built and `dev/archive/` the finished ones.

@@ -1,0 +1,22 @@
+"""Command-line interface: parse arguments, call library code, return an exit code."""
+
+from __future__ import annotations
+
+import argparse
+from collections.abc import Sequence
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="{{ project_slug }}",
+        description={{ description | tojson }},
+    )
+    # Example option: replace it with your own commands.
+    parser.add_argument("--name", default="world", help="who to greet (default: %(default)s)")
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    print(f"Hello, {args.name}!")
+    return 0

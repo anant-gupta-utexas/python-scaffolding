@@ -1,0 +1,198 @@
+# {{ project_name }}
+
+{{ description }}
+
+This document is the central "signpost" for the repository: quick setup commands, links to the
+core documentation, and the development workflow. `CLAUDE.md` simply imports this file.
+
+## Quick Start: Developer Setup
+
+```bash
+# 1. Install dependencies (uv project; Python {{ python_version }} from .python-version)
+uv sync
+
+# 2. Quality gate: run before every commit (ruff, mypy --strict, size limits, secret scan, pytest)
+scripts/check.sh
+{% if is_cli %}
+
+# 3. Run the CLI
+uv run {{ project_slug }} --help
+{% endif %}
+{% if is_service %}
+
+# 3. Run the service (copy .env.example to .env first)
+uv run uvicorn {{ package_name }}.infrastructure.api.app:create_app --factory --reload
+docker compose up --build
+{% endif %}
+```
+
+Add dependencies with `uv add <pkg>` (or `uv add --dev <pkg>`). Do not edit `uv.lock` by hand.
+
+## Directory Structure & Walkthrough
+
+```
+.
+├── AGENTS.md          # This file
+├── CLAUDE.md          # Imports AGENTS.md
+├── STATUS.md          # Machine-readable project status (see below)
+├── pyproject.toml     # uv project (src layout) + ruff / mypy / pytest / coverage config
+├── src/{{ package_name }}/   # The package
+├── tests/             # pytest suite; fixtures hold synthetic data only
+├── docs/              # Evergreen documentation (see below)
+├── dev/               # Work-in-progress plans, tasks, context (see below)
+├── scripts/           # check.sh (the gate), check_sizes.py, check_secrets.py, new_feature.sh
+{% if is_ds %}
+├── notebooks/         # Exploration only; reusable code moves into src/
+├── data/              # GITIGNORED: raw/derived data, created on demand
+{% endif %}
+{% if is_service %}
+├── Dockerfile, docker-compose.yml, .env.example
+{% endif %}
+└── .venv/             # GITIGNORED
+```
+
+### Status File (`STATUS.md`)
+
+**CURRENT STATE**: root-level, machine-readable status for cross-repo coordination. Frontmatter:
+`project`, `status` (`design | building | shipped | maintenance | paused`), `phase`,
+`last_updated`, `next_gate`, `blocked_on`. Sections: Current, Recent, Next, Blocked, Pointers.
+Update it whenever the phase or a gate changes.
+
+### Core Documentation (`docs/`)
+
+**EVERGREEN DOCS**: the single source of truth. Start at `docs/README.md`.
+
+```
+docs/
+├── 00_research/     # Findings, spikes and evidence behind decisions
+├── 01_product/      # "Why": product requirements and scope (PRD.md)
+├── 02_architecture/ # "High-level how": target design and requirements (SYSTEM_DESIGN.md, TRD.md)
+├── 03_guides/       # "How-to": getting_started.md and topic guides
+└── 04_testing/      # "Quality": the gate and testing strategy (index.md)
+```
+
+`docs/README.md` is the single index to every doc. Do not add a README per directory; add one
+only for a directory that holds more than five files. New docs get a row in `docs/README.md`.
+
+### Development Documentation (`dev/`)
+
+**WORK-IN-PROGRESS**: technical designs and planning for features being built. Start with
+`dev/README.md` for the workflow and handoff notes; `dev/session-log.md` holds per-session notes.
+
+```
+dev/
+├── active/      # Features in development (plan, context, tasks)
+├── archive/     # Historical record of completed features
+└── _templates/  # Starting points used by scripts/new_feature.sh
+```
+
+**Dev Workflow:**
+1. **Start planning**: `scripts/new_feature.sh <feature-name>` creates `dev/active/<feature-name>/`
+2. **Define the spec**: fill in `<name>-plan.md` (technical design), `<name>-context.md` (decisions,
+   dependencies, files to touch, current state) and `<name>-tasks.md` (progress checklist)
+3. **Build**: get the plan reviewed, then implement on a `feature/<name>` branch with tests alongside
+4. **Update core docs**: update `docs/` and `STATUS.md` (part of the Definition of Done)
+5. **Archive**: move the folder from `dev/active/` to `dev/archive/` after merge
+
+### Source Code (`src/{{ package_name }}/`)
+{% if is_cli %}
+
+A small library with an `argparse` entry point:
+
+```
+src/{{ package_name }}/
+├── cli.py        # main(argv) -> int: parse arguments, call library code, return an exit code
+└── __main__.py   # python -m {{ package_name }}
+```
+
+Keep business logic out of `cli.py` so it stays importable and testable without a terminal.
+{% endif %}
+{% if is_service %}
+
+**Clean Architecture** with three layers (see `docs/03_guides/core_concepts.md`):
+
+```
+src/{{ package_name }}/
+├── domain/          # "Business logic": pure entities, rules, errors; imports nothing outward
+├── application/     # "Use cases": orchestrates workflows against domain interfaces
+└── infrastructure/  # "Frameworks": FastAPI (api/), persistence (database/), settings
+```
+
+**Key principles:**
+- Dependency inversion: inner layers define interfaces, outer layers implement them
+- Single responsibility: each component has one reason to change
+- Testability: business logic is independent of frameworks
+- Immutability: `@dataclass(frozen=True)` for domain entities; never mutate existing objects
+- Security first: validate all inputs, no hardcoded secrets, parameterized queries only
+{% endif %}
+{% if is_ds %}
+
+```
+src/{{ package_name }}/
+├── paths.py     # Project directories (data/raw, data/interim, data/processed, ...)
+├── ingest/      # Get data in: loaders, schema validation
+├── features/    # Transform data into model inputs
+└── models/      # Fit, evaluate, persist
+```
+
+Notebooks explore; `src/` is the product. Promote notebook code into typed, tested functions.
+{% endif %}
+
+## Coding Style
+
+- Follow the Zen of Python; prefer DRY, YAGNI and SOLID, and do not build for hypothetical futures
+- Functions < 50 lines, files < 400 lines (800 max); `scripts/check_sizes.py` enforces the limits
+- No deep nesting (> 4 levels): use early returns and extract helpers
+- Type everything (`mypy --strict`); format and lint with ruff (line length 100)
+- Timestamps: RFC3339 with an explicit UTC offset; never rely on local timezone inference
+{% if is_service %}
+- `@dataclass(frozen=True)` for domain entities; `pydantic.BaseModel` for API schemas
+- Configuration through `pydantic_settings.BaseSettings`, never `os.environ` directly
+{% endif %}
+- Never hardcode credentials or tokens
+- Write large outputs incrementally (stream to disk) so a killed run leaves usable partial results
+
+## Error Handling
+
+- Never silently swallow errors; surface actionable messages (what failed, with which input)
+- Retry only retryable errors, with exponential backoff and a deadline
+{% if is_service %}
+- Custom exception hierarchy rooted at `DomainError` (`NotFoundError`, `DomainValidationError`, ...)
+- Log detailed context server-side; return user-friendly messages in API responses
+- Map errors to responses in one place (the FastAPI exception handlers), not in routers
+{% endif %}
+{% if is_ds %}
+
+## Data Handling
+
+- Data can be sensitive: keep it under `data/` (gitignored), out of git and public remotes
+- Never commit notebooks with outputs (`nbstripout` is installed as a git filter)
+- Check the contents of any data file before committing it; only synthetic fixtures are tracked
+- Make runs reproducible: pin seeds, record input versions, write outputs incrementally
+{% endif %}
+{% if is_service %}
+
+## Security Checklist
+
+Before every commit, verify:
+- No hardcoded secrets (API keys, passwords, tokens); `.env` is never committed
+- All user input validated (Pydantic schemas at the API boundary)
+- SQL injection prevented (parameterized queries only)
+- Authentication and authorization checked on every protected route
+- Rate limiting on public endpoints
+- Error messages do not leak internals (stack traces, DB errors)
+
+## Anti-Patterns (Avoid)
+
+- Pydantic V1 APIs (`class Config:`, `.dict()`, `.json()`): use the V2 equivalents
+- Business logic in API routers: put it in application use cases
+- Importing infrastructure from domain (dependency rule violation)
+- Committing `.env` files or hardcoded credentials
+{% endif %}
+
+## Definition of Done
+
+- `scripts/check.sh` passes (coverage floor {{ min_coverage }}%)
+- Docs updated (`docs/`, the `docs/README.md` index, `STATUS.md` if the phase or gate moved)
+- The feature's `dev/active/` folder is up to date, or archived after merge
+- Committed in small, focused commits; nothing pushed without the owner's go-ahead

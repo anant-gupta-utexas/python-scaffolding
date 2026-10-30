@@ -1,0 +1,6 @@
+from {{ package_name }}.domain.errors import DomainError, DomainValidationError, NotFoundError
+
+
+def test_specific_errors_are_domain_errors() -> None:
+    assert issubclass(NotFoundError, DomainError)
+    assert issubclass(DomainValidationError, DomainError)

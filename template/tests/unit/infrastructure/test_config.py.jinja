@@ -1,0 +1,20 @@
+import pytest
+
+from {{ package_name }}.infrastructure.config import Settings, get_settings
+
+
+def test_defaults() -> None:
+    settings = Settings(_env_file=None)
+
+    assert settings.environment == "development"
+    assert settings.debug is False
+
+
+def test_reads_environment_variables(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "production")
+
+    assert Settings(_env_file=None).environment == "production"
+
+
+def test_get_settings_is_cached() -> None:
+    assert get_settings() is get_settings()

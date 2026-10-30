@@ -1,0 +1,141 @@
+# Copier template: Python scaffolding (library/CLI, FastAPI service, data science).
+#
+#   uvx copier copy gh:anant-gupta-utexas/python-scaffolding my-new-project
+#   cd my-new-project && copier update      # later, to pull in template improvements
+#
+# Everything the generated project contains lives under ./template.
+
+_min_copier_version: "9.4.0"
+_subdirectory: template
+_answers_file: .copier-answers.yml
+# Jinja control lines ({% if %} on their own line) leave no blank lines behind.
+_envops:
+  trim_blocks: true
+  lstrip_blocks: true
+
+# ---------------------------------------------------------------- questions
+project_name:
+  type: str
+  help: Human-readable project name
+  default: My Project
+  validator: >-
+    {% if not project_name.strip() %}Project name cannot be empty{% endif %}
+
+package_name:
+  type: str
+  help: Importable Python package name (lowercase, underscores)
+  default: "{{ project_name | lower | regex_replace('[^a-z0-9]+', '_') | trim('_') }}"
+  validator: >-
+    {% if not package_name | regex_search('^[a-z][a-z0-9_]*$') %}
+    Use lowercase letters, digits and underscores, starting with a letter
+    {% endif %}
+
+description:
+  type: str
+  help: One-sentence description (what it does and for whom)
+  default: Add a one-sentence description here.
+
+flavor:
+  type: str
+  help: What kind of project is this?
+  choices:
+    Library or CLI (argparse entry point): library_cli
+    Service (FastAPI + Clean Architecture + Docker): service
+    Data science (notebooks, gitignored data, ingest/features/models): datascience
+  default: library_cli
+
+python_version:
+  type: str
+  help: Python version (drives .python-version, ruff, mypy, Docker)
+  choices: ["3.13", "3.12", "3.11"]
+  default: "3.13"
+
+min_coverage:
+  type: int
+  help: Minimum test coverage (%) enforced by scripts/check.sh
+  default: 80
+  validator: >-
+    {% if min_coverage < 0 or min_coverage > 100 %}Must be between 0 and 100{% endif %}
+
+# ------------------------------------------- derived values (never asked)
+project_slug:
+  type: str
+  default: "{{ package_name | replace('_', '-') }}"
+  when: false
+
+py_target:
+  type: str
+  default: "py{{ python_version | replace('.', '') }}"
+  when: false
+
+is_cli:
+  type: bool
+  default: "{{ flavor == 'library_cli' }}"
+  when: false
+
+is_service:
+  type: bool
+  default: "{{ flavor == 'service' }}"
+  when: false
+
+is_ds:
+  type: bool
+  default: "{{ flavor == 'datascience' }}"
+  when: false
+
+# ---------------------------------------------------------- file selection
+# Patterns match the *rendered* destination path. A pattern that renders to an
+# empty string excludes nothing, so each flavor only drops the other flavors' files.
+# Setting _exclude replaces Copier's defaults, so they are repeated first.
+_exclude:
+  - copier.yaml
+  - copier.yml
+  - "~*"
+  - "*.py[co]"
+  - __pycache__
+  - .git
+  - .DS_Store
+  - .svn
+  # library_cli only
+  - "{% if not is_cli %}src/{{ package_name }}/cli.py{% endif %}"
+  - "{% if not is_cli %}src/{{ package_name }}/__main__.py{% endif %}"
+  - "{% if not is_cli %}tests/unit/test_cli.py{% endif %}"
+  # service only
+  - "{% if not is_service %}src/{{ package_name }}/application{% endif %}"
+  - "{% if not is_service %}src/{{ package_name }}/domain{% endif %}"
+  - "{% if not is_service %}src/{{ package_name }}/infrastructure{% endif %}"
+  - "{% if not is_service %}tests/unit/application{% endif %}"
+  - "{% if not is_service %}tests/unit/domain{% endif %}"
+  - "{% if not is_service %}tests/unit/infrastructure{% endif %}"
+  - "{% if not is_service %}tests/integration{% endif %}"
+  - "{% if not is_service %}tests/e2e{% endif %}"
+  - "{% if not is_service %}Dockerfile{% endif %}"
+  - "{% if not is_service %}.dockerignore{% endif %}"
+  - "{% if not is_service %}docker-compose.yml{% endif %}"
+  - "{% if not is_service %}.env.example{% endif %}"
+  - "{% if not is_service %}docs/03_guides/core_concepts.md{% endif %}"
+  # datascience only
+  - "{% if not is_ds %}src/{{ package_name }}/ingest{% endif %}"
+  - "{% if not is_ds %}src/{{ package_name }}/features{% endif %}"
+  - "{% if not is_ds %}src/{{ package_name }}/models{% endif %}"
+  - "{% if not is_ds %}src/{{ package_name }}/paths.py{% endif %}"
+  - "{% if not is_ds %}tests/unit/test_paths.py{% endif %}"
+  - "{% if not is_ds %}notebooks{% endif %}"
+
+# ------------------------------------------------------------- post-generation
+# Tasks run after copy AND update, so every command must be safe to repeat.
+# Nothing is committed for you: review the result, then make the first commit.
+_tasks:
+  - command: "[ -d .git ] || git init -q -b main"
+  - command: uv sync
+  - command: uv run nbstripout --install
+    when: "{{ is_ds }}"
+
+_message_after_copy: |
+  Your {{ flavor }} project is ready in {{ _copier_conf.dst_path }}
+
+    cd {{ _copier_conf.dst_path }}
+    scripts/check.sh      # the quality gate: must pass before every commit
+    git add -A && git commit -m "chore: scaffold from python-scaffolding"
+
+  Start with AGENTS.md, then docs/README.md. Plan features with scripts/new_feature.sh <name>.

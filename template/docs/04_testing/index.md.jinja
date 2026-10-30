@@ -1,0 +1,43 @@
+# Testing
+
+## The gate
+
+`scripts/check.sh` is the only definition of "ready to commit". CI runs the same script.
+
+| Step | Tool | Fails when |
+|---|---|---|
+| Lint | `ruff check` | any rule in `[tool.ruff.lint]` is violated (includes security rules `S`) |
+| Format | `ruff format --check` | a file is not formatted |
+| Types | `mypy` (`strict = true`) | any type error in `src/{{ package_name }}` |
+| Size | `scripts/check_sizes.py` | a file is over 800 lines or a function over 50 (warns over 400 lines) |
+| Secrets | `scripts/check_secrets.py` | key material is tracked, staged or untracked-but-not-ignored |
+| Tests | `pytest --cov` | a test fails or coverage drops below {{ min_coverage }}% |
+
+## Layout
+
+```
+tests/
+├── conftest.py      # shared fixtures
+├── unit/            # fast, no I/O; mirrors src/{{ package_name }}/
+{% if is_service %}
+├── integration/     # real adapters (database, queues); keep them hermetic
+└── e2e/             # the whole app through its HTTP interface
+{% endif %}
+```
+
+## Rules of thumb
+
+- Arrange, act, assert. One behavior per test; name it for the behavior (`test_rejects_empty_name`).
+- Parametrize instead of copy-pasting cases.
+- Mock only at the boundary you do not own (network, clock, cloud). Do not mock your own code.
+- Tests that need real external systems get `@pytest.mark.live`. They are skipped by default;
+  run them on purpose with `uv run pytest -m live --no-cov`.
+- Fixtures contain synthetic data only. Never commit real data or credentials.
+
+## Commands
+
+```bash
+uv run pytest                          # everything not marked live, with coverage
+uv run pytest tests/unit --no-cov      # one area, fast
+uv run pytest -k name --no-cov         # one test
+```

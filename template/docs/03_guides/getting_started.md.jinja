@@ -1,0 +1,73 @@
+# Getting started
+
+## Prerequisites
+
+- [uv](https://docs.astral.sh/uv/) (it installs Python {{ python_version }} for you from `.python-version`)
+- git
+{% if is_service %}
+- Docker (optional, for `docker compose up`)
+{% endif %}
+
+## Setup
+
+```bash
+uv sync                # creates .venv from pyproject.toml / uv.lock
+scripts/check.sh       # the quality gate: should pass on a fresh checkout
+```
+
+Add dependencies with `uv add <pkg>` (runtime) or `uv add --dev <pkg>` (tooling). Never edit
+`uv.lock` by hand.
+{% if is_cli %}
+
+## Run
+
+```bash
+uv run {{ project_slug }} --help
+uv run python -m {{ package_name }} --help
+```
+
+The CLI lives in `src/{{ package_name }}/cli.py`. Keep `main(argv)` thin: parse arguments, call
+library code, return an exit code.
+{% endif %}
+{% if is_service %}
+
+## Run the service
+
+```bash
+cp .env.example .env
+uv run uvicorn {{ package_name }}.infrastructure.api.app:create_app --factory --reload
+curl localhost:8000/health
+
+docker compose up --build     # same thing, in a container
+```
+
+Configuration comes from environment variables via `pydantic-settings`
+(`src/{{ package_name }}/infrastructure/config.py`); see `.env.example` for the keys. Read
+[`core_concepts.md`](core_concepts.md) before adding a feature: it explains where code goes.
+{% endif %}
+{% if is_ds %}
+
+## Data and notebooks
+
+- Raw and derived data live under `data/` (gitignored: it can hold sensitive or large files).
+  `{{ package_name }}.paths` gives you the directories and creates them on demand.
+- Notebooks live in `notebooks/`. `nbstripout` is installed as a git filter so outputs never get
+  committed. Move anything reusable out of a notebook into `src/{{ package_name }}/`, where it is
+  typed and tested.
+- Stages: `ingest/` (get data in), `features/` (transform), `models/` (fit and evaluate).
+- Only synthetic fixtures under `tests/fixtures/` are tracked. Check file contents before
+  committing any data file.
+
+```bash
+uv run jupyter lab      # after: uv add --dev jupyterlab
+```
+{% endif %}
+
+## Development workflow
+
+1. Plan: `scripts/new_feature.sh <name>`, fill in the plan, get it reviewed.
+2. Build on a `feature/<name>` branch with tests alongside the code.
+3. `scripts/check.sh` before every commit. Commit often; git is how we roll back and forward.
+4. Update `docs/` and `STATUS.md`, then archive the plan from `dev/active/` to `dev/archive/`.
+
+See [`dev/README.md`](../../dev/README.md) for details.

@@ -1,0 +1,39 @@
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from {{ package_name }}.domain.errors import DomainError, DomainValidationError, NotFoundError
+from {{ package_name }}.infrastructure.api.app import create_app
+from {{ package_name }}.infrastructure.config import Settings
+
+
+def make_app() -> FastAPI:
+    return create_app(Settings(_env_file=None))
+
+
+def test_health() -> None:
+    response = TestClient(make_app()).get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+@pytest.mark.parametrize(
+    ("error", "status"),
+    [
+        (NotFoundError("no such thing"), 404),
+        (DomainValidationError("bad input"), 422),
+        (DomainError("something else"), 400),
+    ],
+)
+def test_domain_errors_map_to_http_status(error: DomainError, status: int) -> None:
+    app = make_app()
+
+    @app.get("/boom")
+    def boom() -> None:
+        raise error
+
+    response = TestClient(app).get("/boom")
+
+    assert response.status_code == status
+    assert response.json() == {"error": {"code": type(error).__name__, "message": str(error)}}
